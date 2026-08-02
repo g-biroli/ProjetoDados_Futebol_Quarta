@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m streamlit run home.py --server.headless true --server.port 8766 --browser.gatherUsageStats false)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\gabri\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-gabri-OneDrive-Dokument-GitHub-ProjetoDados-Futebol-Quarta\\\\f4896b8c-3228-48f4-bb29-ffcb2642d981\\\\scratchpad\\\\apptest.py\")"
+    ]
+  }
+}
