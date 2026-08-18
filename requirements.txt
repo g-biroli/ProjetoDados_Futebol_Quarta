@@ -3,5 +3,3 @@ pandas>=2.2
 matplotlib>=3.8
 fpdf2>=2.7.9
 requests>=2.31
-gspread>=6.1
-google-auth>=2.29

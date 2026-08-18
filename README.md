@@ -1,52 +1,57 @@
-# Futebol de Quarta - Estatisticas
+# Futebol de Quarta
 
-Painel em Streamlit com as estatisticas do futebol semanal do grupo: artilharia,
-assistencias, aproveitamento e evolucao de cada jogador ao longo do tempo. Os
-dados sao lidos direto da planilha do Google Sheets do grupo, o painel gera um
-relatorio em PDF com os mesmos indicadores e graficos da pagina, e uma pagina
-restrita permite ao administrador cadastrar novos dias de jogo direto pela web.
+Painel em Streamlit com o placar do futebol semanal do grupo: classificacao
+geral, artilharia, assistencias e evolucao de cada jogador ao longo das
+rodadas.
+
+## Paginas
+
+- **Home** - apresentacao do projeto (sem dados).
+- **Visao da Rodada** - resultado de uma rodada especifica (escolhida num
+  seletor), no formato "placar" (classificacao da rodada + artilharia e
+  assistencias daquela rodada).
+- **Visao Geral** - classificacao acumulada de todas as rodadas: lider,
+  artilheiro geral, garcom de assistencias geral, tabela completa e graficos
+  de evolucao (gols, assistencias e pontos acumulados por jogador). Tem
+  tambem um botao para baixar tudo em PDF.
 
 ## Fonte de dados
 
-A planilha precisa continuar compartilhada como **"Qualquer pessoa com o link -
-Leitor"**, pois a leitura usa o CSV publico dela (sem credenciais). Colunas
-esperadas (uma linha por jogador, por dia de jogo):
+Os dados vem da aba **"LS_BASE_JOGOS"** da planilha do grupo no Google Drive
+(uma linha por jogador, por rodada, ja com PTS/V/E/D/GOLS/ASSIST./G+A
+calculados). A planilha precisa continuar compartilhada como "Qualquer
+pessoa com o link - Leitor".
 
-`DATA, JOGADOR, GOLS, ASSISTENCIA, VITORIA, DERROTA, EMPATE, PARTIDAS`
+O app **nao busca a planilha a cada acesso**. Em vez disso:
 
-## Login da pagina "Inserir Dados"
+1. Uma [GitHub Action](.github/workflows/update-data.yml) roda toda
+   quinta-feira (as 12:00 UTC) e baixa a aba `LS_BASE_JOGOS`, salvando em
+   `data/base_jogos.csv`.
+2. Se o conteudo mudou, a Action commita e da push desse arquivo no
+   repositorio.
+3. O app le sempre `data/base_jogos.csv`. No Streamlit Community Cloud, um
+   push no repositorio dispara um redeploy automatico, entao o painel reflete
+   os dados novos pouco depois da Action rodar.
 
-A pagina `Inserir Dados` (menu lateral) exige login. As credenciais **nao
-ficam no codigo**, ficam em `st.secrets`:
+Isso deixa o app rapido e simples (nao depende do Google em tempo de
+execucao) e da ao grupo uma cadencia previsivel de atualizacao. Para forcar
+uma atualizacao fora do horario programado, va em Actions > "Atualizar dados
+do futebol" > "Run workflow" no GitHub, ou rode localmente:
 
-- Local: já criadas em `.streamlit/secrets.toml` (arquivo ignorado pelo git).
-- Streamlit Community Cloud: configure o mesmo conteudo em
-  **App settings > Secrets** depois do deploy (nunca commite esse arquivo).
+```bash
+python scripts/fetch_data.py
+git add data/base_jogos.csv
+git commit -m "chore: atualizar dados"
+git push
+```
 
-Usuario: `ADM` — Senha: `FUTQUARTA123` (altere livremente em `secrets.toml`).
+Se `data/base_jogos.csv` ainda nao existir (ex.: primeiro clone do repo antes
+da Action rodar), o app busca a planilha diretamente como alternativa.
 
-## Habilitar a escrita na planilha (service account do Google)
+## Regras da classificacao
 
-Para a pagina `Inserir Dados` conseguir gravar na planilha, crie uma service
-account do Google Cloud com acesso de Editor a ela:
-
-1. No [Google Cloud Console](https://console.cloud.google.com/), crie (ou
-   reaproveite) um projeto.
-2. Em "APIs e servicos", ative a **Google Sheets API** e a **Google Drive API**.
-3. Em "Credenciais", crie uma **Conta de servico** (Service Account).
-4. Na conta de servico criada, gere uma **chave** em formato JSON e baixe o
-   arquivo.
-5. Abra a planilha no Google Drive e compartilhe com o e-mail
-   `...@....iam.gserviceaccount.com` (campo `client_email` do JSON) com
-   permissao de **Editor**.
-6. Copie os campos do JSON para dentro de `[gcp_service_account]` em
-   `.streamlit/secrets.toml` (localmente) e em **App settings > Secrets** no
-   Streamlit Cloud (em producao). O arquivo `.streamlit/secrets.toml` ja tem
-   um modelo comentado com os campos esperados.
-
-Enquanto esse passo nao for feito, o resto do app funciona normalmente (leitura
-e graficos) - apenas o botao de salvar na pagina `Inserir Dados` mostra um
-aviso pedindo para configurar as credenciais.
+- **Pontos**: 3 por vitoria + 1 por empate (padrao futebol).
+- **Desempate**: 1º pontos, 2º gols + assistencias, 3º gols, 4º assistencias.
 
 ## Rodar localmente
 
@@ -54,44 +59,39 @@ aviso pedindo para configurar as credenciais.
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+python scripts/fetch_data.py   # gera data/base_jogos.csv com os dados atuais
 streamlit run home.py
 ```
 
 ## Publicar no Streamlit Community Cloud
 
-1. Suba este repositorio no GitHub (`git push`). **Confira que
-   `.streamlit/secrets.toml` nao foi commitado** (ele deve constar no
-   `.gitignore`).
+1. Suba este repositorio no GitHub (`git push`), incluindo `data/base_jogos.csv`.
 2. Acesse [share.streamlit.io](https://share.streamlit.io) e conecte sua conta
    do GitHub.
 3. Clique em "New app", selecione o repositorio, a branch e defina o arquivo
    principal como `home.py`.
-4. Em "Advanced settings > Secrets", cole o conteudo de `admin` e (se ja
-   tiver) `gcp_service_account`, no mesmo formato TOML do arquivo local.
-5. Clique em "Deploy". O Streamlit Cloud instala o `requirements.txt`
-   automaticamente e gera uma URL publica para compartilhar com o grupo.
-6. A pagina `Inserir Dados` aparece automaticamente no menu lateral (todo
-   arquivo dentro de `pages/` vira uma pagina no app).
-7. Sempre que a planilha for atualizada (manualmente ou pela pagina de
-   insercao), os dados no app se atualizam sozinhos a cada 5 minutos (cache),
-   ou na hora pelo botao "Atualizar dados da planilha" na barra lateral.
-
-## Identidade visual
-
-As cores dos graficos e da interface usam uma paleta vibrante multi-cor no
-espirito da Copa do Mundo 2026, validada para leitura por pessoas com
-daltonismo (cada cor tem contraste suficiente entre si). Cada jogador recebe
-sempre a mesma cor em todos os graficos e no PDF, independente do filtro ou
-ranking aplicado. Nao reproduzimos a logo, o trofeu ou a marca oficial da
-FIFA/Copa do Mundo — apenas o espirito de cores vibrantes e tipografia bold.
+4. Clique em "Deploy". O Streamlit Cloud instala o `requirements.txt` e gera
+   uma URL publica para compartilhar com o grupo.
+5. As paginas `Visao da Rodada` e `Visao Geral` aparecem automaticamente no
+   menu lateral (todo arquivo dentro de `pages/` vira uma pagina no app).
 
 ## Estrutura
 
-- `home.py` - pagina principal do Streamlit (KPIs, rankings, graficos, botao de PDF).
-- `pages/1_Inserir_Dados.py` - pagina restrita para cadastrar um novo dia de jogo.
-- `src/data.py` - leitura e tratamento dos dados da planilha.
-- `src/charts.py` - graficos (matplotlib) reutilizados na pagina e no PDF.
+- `home.py` - pagina de apresentacao (sem dados).
+- `pages/1_Visao_da_Rodada.py` - placar de uma rodada especifica.
+- `pages/2_Visao_Geral.py` - classificacao geral, graficos de evolucao e PDF.
+- `src/data.py` - leitura e tratamento dos dados (local ou planilha).
+- `src/charts.py` - graficos de evolucao (matplotlib), reutilizados na pagina e no PDF.
 - `src/pdf_report.py` - montagem do relatorio em PDF (fpdf2).
-- `src/theme.py` - paleta de cores, fonte e componentes visuais (KPIs, header).
-- `src/auth.py` - login simples baseado em `st.secrets`.
-- `src/sheets_writer.py` - escrita de novas linhas na planilha (gspread).
+- `src/theme.py` - paleta de cores, tipografia e componentes visuais (cabecalho, tabela de classificacao, paineis de ranking).
+- `scripts/fetch_data.py` - baixa a planilha e atualiza `data/base_jogos.csv`.
+- `.github/workflows/update-data.yml` - GitHub Action que roda o script acima toda semana.
+
+## Identidade visual
+
+As tabelas de classificacao usam um layout "placar" (navy / laranja / dourado
+/ vermelho) inspirado no boletim que o grupo ja usa para registrar os jogos.
+A faixa de cor de cada linha e decorativa (alterna entre as 3 cores) - a
+planilha nao guarda de forma estruturada em qual time (T1/T2/T3) cada
+jogador jogou em cada rodada, entao essa informacao nao e usada para colorir
+as linhas.
