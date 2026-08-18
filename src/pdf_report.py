@@ -9,15 +9,21 @@ import pandas as pd
 from fpdf import FPDF
 
 TABLE_COLUMNS = [
+    ("POS", "Pos.", 14),
     ("JOGADOR", "Jogador", 45),
-    ("DIAS_JOGADOS", "Dias", 18),
-    ("PARTIDAS", "Partidas", 20),
+    ("PTS", "Pts", 16),
+    ("VITORIA", "V", 16),
+    ("EMPATE", "E", 16),
+    ("DERROTA", "D", 16),
     ("GOLS", "Gols", 18),
-    ("ASSISTENCIAS", "Assist.", 20),
-    ("VITORIAS", "Vitorias", 20),
-    ("DERROTAS", "Derrotas", 20),
-    ("EMPATES", "Empates", 20),
-    ("APROVEITAMENTO_%", "Aprov. %", 22),
+    ("ASSISTENCIA", "Assist.", 20),
+    ("GA", "G+A", 18),
+    ("RODADAS_JOGADAS", "Rodadas", 20),
+]
+
+MINI_TABLE_COLUMNS = [
+    ("JOGADOR", "Jogador", 60),
+    ("VALUE", "Total", 25),
 ]
 
 
@@ -34,11 +40,29 @@ class Report(FPDF):
         self.cell(0, 10, f"Pagina {self.page_no()}", align="C")
 
 
+def _render_table(pdf: FPDF, columns: list[tuple[str, str, int]], rows: pd.DataFrame) -> None:
+    col_widths = [w for _, _, w in columns]
+    headers = [label for _, label, _ in columns]
+    field_names = [name for name, _, _ in columns]
+
+    with pdf.table(col_widths=col_widths, text_align="CENTER", line_height=6) as table:
+        header_row = table.row()
+        for h in headers:
+            header_row.cell(h)
+        for _, record in rows.iterrows():
+            row = table.row()
+            for field in field_names:
+                value = record[field]
+                row.cell(str(value) if isinstance(value, str) else f"{value:g}")
+
+
 def build_pdf(
     kpis: dict[str, str],
-    summary_df: pd.DataFrame,
+    overall_df: pd.DataFrame,
+    mini_tables: list[tuple[str, pd.DataFrame]],
     figures: list[tuple[str, plt.Figure | None]],
 ) -> bytes:
+    """mini_tables: lista de (titulo, dataframe com colunas JOGADOR e VALUE)."""
     pdf = Report(orientation="L", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
@@ -59,19 +83,15 @@ def build_pdf(
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 8, "Classificacao geral", ln=True)
     pdf.set_font("Helvetica", "", 8)
+    _render_table(pdf, TABLE_COLUMNS, overall_df)
 
-    col_widths = [w for _, _, w in TABLE_COLUMNS]
-    headers = [label for _, label, _ in TABLE_COLUMNS]
-    field_names = [name for name, _, _ in TABLE_COLUMNS]
-
-    with pdf.table(col_widths=col_widths, text_align="CENTER", line_height=6) as table:
-        header_row = table.row()
-        for h in headers:
-            header_row.cell(h)
-        for _, record in summary_df.iterrows():
-            row = table.row()
-            for field in field_names:
-                row.cell(f"{record[field]:g}" if field != "JOGADOR" else str(record[field]))
+    for title, mini_df in mini_tables:
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.set_text_color(*_hex_to_rgb("#0b0b0b"))
+        pdf.cell(0, 8, title, ln=True)
+        pdf.set_font("Helvetica", "", 9)
+        _render_table(pdf, MINI_TABLE_COLUMNS, mini_df)
 
     tmp_files: list[str] = []
     try:
