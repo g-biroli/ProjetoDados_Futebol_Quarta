@@ -50,7 +50,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-callout("\U0001F3C6 Aqui e raça, resenha e zero compromisso com a tatica.", variant="primary")
+callout("\U0001F3C6 Aqui é raça, resenha e zero compromisso com a tática.", variant="primary")
 callout("QUEM VENCERÁ O TROFEU BAGRE D'OR?", variant="secondary")
 
 st.divider()
