@@ -1,9 +1,10 @@
-"""Identidade visual "placar de futebol" (navy / laranja / dourado / vermelho),
-inspirada no boletim de classificacao usado pelo grupo (POS/JOGADOR/PTS/V/E/D/G/A).
+"""Identidade visual do app: base preto/branco (Copa do Mundo 26), com as
+cores vibrantes da paleta oficial usadas como destaque (KPIs, graficos,
+medalhas) e nao como fundo de tabela inteira - mantendo as tabelas de
+classificacao limpas e faceis de ler.
 
-Nao reproduz a logo do grupo nem qualquer marca de terceiros - apenas o
-layout (cabecalho com rodada/data, tabela de classificacao, paineis de
-artilharia/assistencias, legenda de desempate) e a paleta de cores.
+Nao reproduz a logo da FIFA/Copa do Mundo nem qualquer marca de terceiros -
+apenas a paleta de cores e o espirito "preto e branco com destaque dourado".
 """
 
 import html
@@ -11,16 +12,17 @@ import html
 import pandas as pd
 import streamlit as st
 
-NAVY = "#0d1b4c"
-ORANGE = "#e8752b"
-GOLD = "#f2c14e"
-RED = "#a4222f"
-INK_ON_DARK = "#ffffff"
+from src.charts import BRONZE, GOLD, PALETTE, SILVER
 
-BAND_COLORS = [NAVY, ORANGE, GOLD]
-# Texto branco so tem contraste seguro sobre o navy escuro; laranja e dourado
-# (claros) usam texto navy para manter leitura confortavel.
-BAND_TEXT = ["#ffffff", NAVY, NAVY]
+BLACK = "#000000"
+WHITE = "#ffffff"
+INK = "#111111"
+INK_MUTED = "#5c5c5c"
+ROW_ALT = "#f7f7f7"
+BORDER = "rgba(0,0,0,0.08)"
+
+MEDALS = {1: "\U0001F947", 2: "\U0001F948", 3: "\U0001F949"}  # 🥇 🥈 🥉
+MEDAL_BORDER = {1: GOLD, 2: SILVER, 3: BRONZE}
 
 _CSS = f"""
 <style>
@@ -36,7 +38,7 @@ html, body, [class*="css"] {{
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    background: {NAVY};
+    background: {BLACK};
     border-radius: 12px;
     padding: 18px 22px;
     margin-bottom: 18px;
@@ -45,7 +47,7 @@ html, body, [class*="css"] {{
 .sb-title-main {{
     font-family: 'Archivo Black', 'Inter', sans-serif;
     font-size: 1.9rem;
-    color: {INK_ON_DARK};
+    color: {WHITE};
     line-height: 1.1;
 }}
 
@@ -83,13 +85,13 @@ html, body, [class*="css"] {{
     display: block;
     font-family: 'Archivo Black', 'Inter', sans-serif;
     font-size: 1.15rem;
-    color: {INK_ON_DARK};
+    color: {WHITE};
 }}
 
 .sb-table-wrap {{
     overflow-x: auto;
     border-radius: 10px;
-    border: 1px solid rgba(11,11,11,0.08);
+    border: 1px solid {BORDER};
     margin-bottom: 18px;
 }}
 
@@ -97,12 +99,13 @@ table.sb-table {{
     width: 100%;
     border-collapse: collapse;
     font-size: 0.88rem;
+    background: {WHITE};
 }}
 
 table.sb-table caption {{
     text-align: left;
-    background: {RED};
-    color: {INK_ON_DARK};
+    background: {BLACK};
+    color: {WHITE};
     font-weight: 700;
     padding: 8px 12px;
     font-size: 0.85rem;
@@ -111,8 +114,8 @@ table.sb-table caption {{
 }}
 
 table.sb-table th {{
-    background: {NAVY};
-    color: {INK_ON_DARK};
+    background: {BLACK};
+    color: {WHITE};
     padding: 8px 10px;
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -129,8 +132,10 @@ table.sb-table th.sb-col-jogador {{
 table.sb-table td {{
     padding: 7px 10px;
     text-align: center;
+    color: {INK};
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    border-bottom: 1px solid {BORDER};
 }}
 
 table.sb-table td.sb-col-jogador {{
@@ -138,38 +143,46 @@ table.sb-table td.sb-col-jogador {{
     font-weight: 700;
 }}
 
+table.sb-table tr.sb-row-alt td {{
+    background: {ROW_ALT};
+}}
+
+table.sb-table tr.sb-row-medal td:first-child {{
+    box-shadow: inset 4px 0 0 0 var(--medal-color);
+}}
+
 .wc-stripe {{
     height: 6px;
     border-radius: 999px;
     margin: 0 0 22px 0;
-    background: linear-gradient(90deg, {NAVY}, {ORANGE}, {GOLD}, {RED});
+    background: linear-gradient(90deg, {", ".join(PALETTE)});
 }}
 
 .wc-title {{
     font-family: 'Archivo Black', 'Inter', sans-serif;
     font-size: 2.3rem;
     line-height: 1.15;
-    color: #0b0b0b;
+    color: {INK};
     margin-bottom: 0.1rem;
 }}
 
 .wc-subtitle {{
-    color: #52514e;
+    color: {INK_MUTED};
     font-size: 0.95rem;
     margin-bottom: 1.1rem;
 }}
 
 .wc-kpi-row {{
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px;
     margin-bottom: 8px;
 }}
 
 .wc-kpi {{
-    background: #fcfcfb;
-    border: 1px solid rgba(11, 11, 11, 0.08);
-    border-top: 4px solid var(--wc-accent, {NAVY});
+    background: {WHITE};
+    border: 1px solid {BORDER};
+    border-top: 4px solid var(--wc-accent, {BLACK});
     border-radius: 10px;
     padding: 14px 16px;
 }}
@@ -179,33 +192,56 @@ table.sb-table td.sb-col-jogador {{
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #52514e;
+    color: {INK_MUTED};
 }}
 
 .wc-kpi .wc-kpi-value {{
     font-family: 'Archivo Black', 'Inter', sans-serif;
     font-size: 1.7rem;
-    color: #0b0b0b;
+    color: {INK};
     margin: 4px 0 2px 0;
     line-height: 1.1;
 }}
 
 .wc-kpi .wc-kpi-sub {{
     font-size: 0.78rem;
-    color: #52514e;
+    color: {INK_MUTED};
 }}
 
 .sb-tiebreak {{
-    background: #fcfcfb;
-    border: 1px solid rgba(11,11,11,0.08);
+    background: {WHITE};
+    border: 1px solid {BORDER};
     border-radius: 10px;
     padding: 10px 14px;
     font-size: 0.8rem;
-    color: #52514e;
+    color: {INK_MUTED};
 }}
 
 .sb-tiebreak b {{
-    color: {NAVY};
+    color: {INK};
+}}
+
+.gh-button {{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: {BLACK};
+    color: {WHITE} !important;
+    text-decoration: none !important;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}}
+
+.gh-button:hover {{
+    background: #222;
+}}
+
+.credit-line {{
+    color: {INK_MUTED};
+    font-size: 0.85rem;
+    margin-top: 4px;
 }}
 
 .stTabs [data-baseweb="tab"] {{
@@ -246,7 +282,7 @@ def scoreboard_header(title: str, rodada_label: str, data_label: str) -> None:
         f"""
         <div class="sb-header">
             <div>
-                <div class="sb-title-main">{html.escape(title)}</div>
+                <div class="sb-title-main">\U000026BD {html.escape(title)}</div>
                 <div class="sb-title-sub">Classificacao</div>
             </div>
             <div class="sb-badges">
@@ -265,11 +301,15 @@ def scoreboard_header(title: str, rodada_label: str, data_label: str) -> None:
     )
 
 
+def _medal_row_attrs(pos: int) -> str:
+    if pos in MEDAL_BORDER:
+        return f' class="sb-row-medal" style="--medal-color:{MEDAL_BORDER[pos]}"'
+    return ""
+
+
 def classification_table(df: pd.DataFrame, caption: str = "Classificacao geral") -> None:
-    """Tabela POS/JOGADOR/PTS/V/E/D/GOLS/ASSISTENCIA/G+A no estilo placar,
-    com uma faixa de cor por linha (decorativa, ciclando navy/laranja/dourado
-    - nao representa o time de fato disputado, essa informacao nao esta
-    disponivel de forma estruturada na planilha)."""
+    """Tabela POS/JOGADOR/PTS/V/E/D/GOLS/ASSISTENCIA/G+A limpa (fundo branco,
+    zebra sutil), com medalha de ouro/prata/bronze nos 3 primeiros colocados."""
     columns = [
         ("POS", "POS"),
         ("JOGADOR", "Jogador"),
@@ -284,13 +324,20 @@ def classification_table(df: pd.DataFrame, caption: str = "Classificacao geral")
 
     rows_html = []
     for i, (_, row) in enumerate(df.iterrows()):
-        band = BAND_COLORS[i % len(BAND_COLORS)]
-        text = BAND_TEXT[i % len(BAND_TEXT)]
+        pos = int(row["POS"])
+        row_class = "sb-row-alt" if i % 2 == 1 else ""
         cells = []
         for col, _ in columns:
             css_class = "sb-col-jogador" if col == "JOGADOR" else ""
-            cells.append(f'<td class="{css_class}">{html.escape(str(row[col]))}</td>')
-        rows_html.append(f'<tr style="background:{band};color:{text}">{"".join(cells)}</tr>')
+            value = html.escape(str(row[col]))
+            if col == "POS" and pos in MEDALS:
+                value = f"{value} {MEDALS[pos]}"
+            cells.append(f'<td class="{css_class}">{value}</td>')
+        attrs = f' class="{row_class}"' if row_class else ""
+        medal_attrs = _medal_row_attrs(pos)
+        if medal_attrs:
+            attrs = medal_attrs
+        rows_html.append(f"<tr{attrs}>{''.join(cells)}</tr>")
 
     header_html = "".join(
         f'<th class="{"sb-col-jogador" if col == "JOGADOR" else ""}">{html.escape(label)}</th>'
@@ -308,16 +355,19 @@ def classification_table(df: pd.DataFrame, caption: str = "Classificacao geral")
 
 
 def mini_ranking_table(df: pd.DataFrame, value_col: str, caption: str, top_n: int = 10) -> None:
-    """Painel lateral simples (Nº, Jogador, valor) tipo 'Artilharia'/'Assistencias'."""
+    """Painel lateral simples (Nº, Jogador, valor) tipo 'Artilharia'/'Assistencias',
+    tambem com medalha nos 3 primeiros."""
     top = df.nlargest(top_n, value_col)[["JOGADOR", value_col]].reset_index(drop=True)
 
     rows_html = []
     for i, row in top.iterrows():
-        band = BAND_COLORS[i % len(BAND_COLORS)]
-        text = BAND_TEXT[i % len(BAND_TEXT)]
+        pos = i + 1
+        row_class = "sb-row-alt" if i % 2 == 1 else ""
+        pos_label = f"{pos} {MEDALS[pos]}" if pos in MEDALS else str(pos)
+        attrs = _medal_row_attrs(pos) or (f' class="{row_class}"' if row_class else "")
         rows_html.append(
-            f'<tr style="background:{band};color:{text}">'
-            f'<td>{i + 1}</td>'
+            f"<tr{attrs}>"
+            f"<td>{pos_label}</td>"
             f'<td class="sb-col-jogador">{html.escape(str(row["JOGADOR"]))}</td>'
             f'<td>{html.escape(str(row[value_col]))}</td>'
             f"</tr>"
@@ -338,5 +388,12 @@ def tiebreak_note() -> None:
         '<div class="sb-tiebreak"><b>Criterios de desempate:</b> '
         "1&ordm; pontos &middot; 2&ordm; gols + assistencias &middot; "
         "3&ordm; gols &middot; 4&ordm; assistencias</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def github_button(url: str, label: str = "Ver codigo no GitHub") -> None:
+    st.markdown(
+        f'<a class="gh-button" href="{html.escape(url)}" target="_blank">{html.escape(label)}</a>',
         unsafe_allow_html=True,
     )

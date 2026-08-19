@@ -12,9 +12,8 @@ from src.theme import (
     tiebreak_note,
 )
 
-st.set_page_config(page_title="Visao da Rodada - Futebol de Quarta", layout="wide")
 apply_theme()
-page_header("Visao da Rodada")
+page_header("\U0001F4C5 Visao da Rodada")
 
 try:
     df = load_data()
@@ -37,8 +36,8 @@ classification_table(round_df, caption=f"Classificacao - Rodada {rodada}")
 
 col1, col2 = st.columns(2)
 with col1:
-    mini_ranking_table(round_df, "GOLS", "Artilharia da rodada", top_n=10)
+    mini_ranking_table(round_df, "GOLS", "\U000026BD Artilharia da rodada", top_n=10)
 with col2:
-    mini_ranking_table(round_df, "ASSISTENCIA", "Assistencias da rodada", top_n=10)
+    mini_ranking_table(round_df, "ASSISTENCIA", "\U0001F3AF Assistencias da rodada", top_n=10)
 
 tiebreak_note()
