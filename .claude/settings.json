@@ -3,7 +3,14 @@
     "allow": [
       "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m streamlit run home.py --server.headless true --server.port 8766 --browser.gatherUsageStats false)",
       "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\gabri\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-gabri-OneDrive-Dokument-GitHub-ProjetoDados-Futebol-Quarta\\\\f4896b8c-3228-48f4-bb29-ffcb2642d981\\\\scratchpad\\\\apptest.py\")",
-      "Read(//c/Users/gabri/AppData/Local/Temp/**)"
+      "Read(//c/Users/gabri/AppData/Local/Temp/**)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"import PIL; print\\('Pillow', PIL.__version__\\)\" 2>$null)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"import scipy; print\\('scipy', scipy.__version__\\)\" 2>$null)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"import numpy; print\\('numpy', numpy.__version__\\)\" 2>$null)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pip install scipy -q)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"import scipy; print\\('scipy', scipy.__version__\\)\")",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pip install pymupdf -q)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"import fitz; print\\('pymupdf ok', fitz.__doc__\\)\")"
     ]
   }
 }

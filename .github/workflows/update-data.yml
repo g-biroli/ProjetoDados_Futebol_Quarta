@@ -2,8 +2,10 @@ name: Atualizar dados do futebol
 
 on:
   schedule:
-    # Toda quinta-feira as 12:00 UTC (09:00 em Brasilia), um dia depois do jogo de quarta.
-    - cron: "0 12 * * 4"
+    # Toda quinta-feira as 12:00 no horario de Brasilia (UTC-3, sem horario
+    # de verao) = 15:00 UTC. O GitHub Actions sempre usa UTC no cron, entao
+    # o horario abaixo (15h) ja esta convertido para UTC.
+    - cron: "0 15 * * 4"
   workflow_dispatch: {}
 
 permissions:

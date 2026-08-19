@@ -1,14 +1,17 @@
 """Graficos matplotlib reutilizados tanto na pagina Streamlit quanto no PDF.
 
-Paleta baseada nas cores oficiais da FIFA World Cup 26 fornecidas pelo grupo.
+Paleta baseada nas cores oficiais da FIFA World Cup 26 fornecidas pelo grupo,
+aplicada sobre fundo escuro (preto), que e a identidade visual do projeto.
 Como duas das cores dadas (vermelho `#D50101` e vermelho profundo `#CE1125`)
 ficam proximas demais em matiz para servir como series adjacentes num mesmo
-grafico, so uma delas entra na rotação categorica (a outra fica reservada,
-sem uso em serie). A ordem abaixo tenta maximizar a distancia perceptual
-entre cores vizinhas (nao havia Node.js disponivel neste ambiente para rodar
-o validador automatico do skill de dataviz, entao o espacamento foi feito
+grafico, so uma delas entra na rotacao categorica. A ordem abaixo prioriza
+tanto o espacamento perceptual entre cores vizinhas quanto o contraste contra
+o fundo preto (nao havia Node.js disponivel neste ambiente para rodar o
+validador automatico do skill de dataviz, entao o espacamento foi feito
 manualmente por matiz + luminancia, com contraste de texto calculado via
-formula WCOG para cada cor - ver PALETTE_TEXT).
+formula WCAG para cada cor - ver PALETTE_TEXT). Cada marca tambem recebe um
+contorno claro fino, para nao "sumir" no fundo preto mesmo nas cores mais
+escuras da paleta (roxo, verde-mexico).
 """
 
 import matplotlib
@@ -21,14 +24,14 @@ import pandas as pd
 BLUE = "#304FFE"
 ORANGE = "#FF3D00"
 BRIGHT_GREEN = "#00C852"
-PURPLE = "#6200EA"
-DEEP_RED = "#CE1125"
 LIME = "#AFEA00"
+DEEP_RED = "#CE1125"
+PURPLE = "#6200EA"
 MEXICO_GREEN = "#006847"
 
-PALETTE = [BLUE, ORANGE, BRIGHT_GREEN, PURPLE, DEEP_RED, LIME, MEXICO_GREEN]
+PALETTE = [BLUE, ORANGE, BRIGHT_GREEN, LIME, DEEP_RED, PURPLE, MEXICO_GREEN]
 # Cor de texto com melhor contraste (WCAG) sobre cada cor da paleta, na mesma ordem.
-PALETTE_TEXT = ["#ffffff", "#000000", "#000000", "#ffffff", "#ffffff", "#000000", "#ffffff"]
+PALETTE_TEXT = ["#ffffff", "#000000", "#000000", "#000000", "#ffffff", "#ffffff", "#ffffff"]
 
 GOLD = "#D4AF37"
 SILVER = "#C0C0C0"
@@ -38,12 +41,13 @@ GOOD = BRIGHT_GREEN
 NEUTRAL = GOLD
 BAD = DEEP_RED
 
-SURFACE = "#ffffff"
-INK_PRIMARY = "#000000"
-INK_SECONDARY = "#4a4a4a"
-GRID = "#e6e6e6"
-AXIS = "#bdbdbd"
-MUTED = "#c9c9c9"
+SURFACE = "#0d0d0d"
+INK_PRIMARY = "#ffffff"
+INK_SECONDARY = "#c9c9c9"
+GRID = "#2b2b2b"
+AXIS = "#4d4d4d"
+MUTED = "#555555"
+MARK_EDGE = "#0d0d0d"
 
 
 def _style_ax(ax: plt.Axes) -> None:
@@ -73,14 +77,18 @@ def bar_ranking(
     metric: str,
     title: str,
     player_colors: dict[str, str],
-    top_n: int = 8,
+    top_n: int = 20,
 ) -> plt.Figure:
     """Ranking horizontal (top N jogadores) para uma metrica como GOLS ou ASSISTENCIA."""
     data = summary_df.nlargest(top_n, metric)[["JOGADOR", metric]].iloc[::-1]
     colors = [player_colors.get(p, PALETTE[0]) for p in data["JOGADOR"]]
 
-    fig, ax = plt.subplots(figsize=(7, 4.5), facecolor=SURFACE)
-    bars = ax.barh(data["JOGADOR"], data[metric], color=colors, height=0.6, zorder=3)
+    height = max(4.5, 0.38 * len(data) + 1)
+    fig, ax = plt.subplots(figsize=(7.5, height), facecolor=SURFACE)
+    bars = ax.barh(
+        data["JOGADOR"], data[metric], color=colors, height=0.65, zorder=3,
+        edgecolor=MARK_EDGE, linewidth=0.8,
+    )
 
     max_val = data[metric].max() if len(data) else 0
     for bar in bars:
@@ -95,7 +103,7 @@ def bar_ranking(
         )
 
     _style_ax(ax)
-    ax.set_title(title, fontsize=12, color=INK_PRIMARY, loc="left", pad=10)
+    ax.set_title(title, fontsize=13, color=INK_PRIMARY, loc="left", pad=10, fontweight="bold")
     ax.set_xlim(0, max_val * 1.15 if max_val else 1)
     fig.tight_layout()
     return fig
@@ -105,19 +113,24 @@ def pie_share(
     summary_df: pd.DataFrame,
     metric: str,
     title: str,
-    player_colors: dict[str, str],
     top_n: int = 6,
 ) -> plt.Figure:
     """Rosca (donut) com a fatia de cada jogador no total da metrica (ex.: gols).
-    Jogadores fora do top N entram agrupados em "Outros"."""
+    Jogadores fora do top N entram agrupados em "Outros".
+
+    As cores aqui sao atribuidas localmente (1a fatia = 1a cor da paleta, e
+    assim por diante) em vez de usar a cor fixa de cada jogador - com poucas
+    fatias visiveis de cada vez, isso garante que nenhuma cor se repita e a
+    leitura fique clara (ao contrario da cor fixa por jogador, que e ordenada
+    alfabeticamente e pode coincidir para dois jogadores do top N)."""
     top = summary_df.nlargest(top_n, metric)[["JOGADOR", metric]].copy()
     total = summary_df[metric].sum()
     outros = total - top[metric].sum()
 
     labels = top["JOGADOR"].tolist()
     values = top[metric].tolist()
-    colors = [player_colors.get(p, PALETTE[0]) for p in labels]
-    text_colors = [PALETTE_TEXT[PALETTE.index(c)] if c in PALETTE else INK_PRIMARY for c in colors]
+    colors = [PALETTE[i % len(PALETTE)] for i in range(len(labels))]
+    text_colors = [PALETTE_TEXT[i % len(PALETTE_TEXT)] for i in range(len(labels))]
 
     if outros > 0:
         labels.append("Outros")
@@ -125,7 +138,7 @@ def pie_share(
         colors.append(MUTED)
         text_colors.append(INK_PRIMARY)
 
-    fig, ax = plt.subplots(figsize=(6.5, 5.5), facecolor=SURFACE)
+    fig, ax = plt.subplots(figsize=(7.5, 5.5), facecolor=SURFACE)
     wedges, _texts, autotexts = ax.pie(
         values,
         colors=colors,
@@ -139,7 +152,7 @@ def pie_share(
         autotext.set_fontsize(9)
         autotext.set_fontweight("bold")
 
-    ax.set_title(title, fontsize=12, color=INK_PRIMARY, loc="left", pad=10)
+    ax.set_title(title, fontsize=13, color=INK_PRIMARY, loc="left", pad=10, fontweight="bold")
     ax.legend(
         wedges,
         labels,
@@ -153,11 +166,12 @@ def pie_share(
     return fig
 
 
-def ved_bar(summary_df: pd.DataFrame, title: str, top_n: int = 8) -> plt.Figure:
+def ved_bar(summary_df: pd.DataFrame, title: str, top_n: int = 20) -> plt.Figure:
     """Barras horizontais empilhadas de Vitorias/Empates/Derrotas dos top N (por PTS)."""
     data = summary_df.nlargest(top_n, "PTS")[["JOGADOR", "VITORIA", "EMPATE", "DERROTA"]].iloc[::-1]
 
-    fig, ax = plt.subplots(figsize=(7, 4.5), facecolor=SURFACE)
+    height = max(4.5, 0.38 * len(data) + 1)
+    fig, ax = plt.subplots(figsize=(7.5, height), facecolor=SURFACE)
     left = [0] * len(data)
     for col, color, label in [
         ("VITORIA", GOOD, "Vitorias"),
@@ -165,7 +179,10 @@ def ved_bar(summary_df: pd.DataFrame, title: str, top_n: int = 8) -> plt.Figure:
         ("DERROTA", BAD, "Derrotas"),
     ]:
         text_color = "#ffffff" if color != NEUTRAL else "#000000"
-        bars = ax.barh(data["JOGADOR"], data[col], left=left, color=color, height=0.6, label=label, zorder=3)
+        bars = ax.barh(
+            data["JOGADOR"], data[col], left=left, color=color, height=0.65, label=label, zorder=3,
+            edgecolor=MARK_EDGE, linewidth=0.8,
+        )
         for bar, value in zip(bars, data[col]):
             if value > 0:
                 ax.text(
@@ -182,7 +199,7 @@ def ved_bar(summary_df: pd.DataFrame, title: str, top_n: int = 8) -> plt.Figure:
     _style_ax(ax)
     ax.grid(axis="x", color=GRID, linewidth=0.8, zorder=0)
     ax.grid(axis="y", visible=False)
-    ax.set_title(title, fontsize=12, color=INK_PRIMARY, loc="left", pad=10)
+    ax.set_title(title, fontsize=13, color=INK_PRIMARY, loc="left", pad=10, fontweight="bold")
     ax.legend(frameon=False, fontsize=8, loc="upper left", bbox_to_anchor=(1.01, 1.0), labelcolor=INK_SECONDARY)
     fig.tight_layout()
     return fig

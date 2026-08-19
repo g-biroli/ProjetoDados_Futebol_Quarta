@@ -106,6 +106,18 @@ def round_table(df: pd.DataFrame, rodada: int) -> pd.DataFrame:
     return rank(subset)
 
 
+def bagre_ranking(ranked_df: pd.DataFrame, top_n: int = 3) -> pd.DataFrame:
+    """Os 'bagres' sao literalmente os ultimos colocados da propria
+    classificacao (por isso recebe um df ja processado por rank(),
+    round_table() ou overall_table()) - o ultimo colocado vira o 1o bagre, o
+    penultimo o 2o, e assim por diante. Empates seguem o mesmo criterio da
+    classificacao normal (G+A, depois gols, depois assistencias), so que
+    olhando pra ponta de baixo da tabela."""
+    worst = ranked_df.tail(top_n).iloc[::-1].reset_index(drop=True).copy()
+    worst["POS"] = range(1, len(worst) + 1)
+    return worst
+
+
 def overall_table(df: pd.DataFrame) -> pd.DataFrame:
     """Classificacao geral: soma de todas as rodadas, por jogador."""
     summary = (

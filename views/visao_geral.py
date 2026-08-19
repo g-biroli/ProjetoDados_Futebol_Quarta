@@ -1,19 +1,22 @@
-"""Classificacao acumulada de todas as rodadas: artilheiro, garcom, lider e graficos."""
+"""Classificacao acumulada de todas as rodadas: artilheiro, garcom, lider, bagres e graficos."""
 
 from datetime import datetime
 
 import streamlit as st
 
 from src.charts import assign_player_colors, bar_ranking, pie_share, ved_bar
-from src.data import load_data, overall_table
+from src.data import bagre_ranking, load_data, overall_table
 from src.pdf_report import build_pdf
 from src.theme import (
     apply_theme,
+    bagre_note,
+    bagre_table,
+    bagre_trophy,
     classification_table,
     kpi_row,
     mini_ranking_table,
+    page_footer,
     page_header,
-    tiebreak_note,
 )
 
 apply_theme()
@@ -31,6 +34,7 @@ if df.empty:
 
 overall = overall_table(df)
 player_colors = assign_player_colors(overall["JOGADOR"].tolist())
+bagres_geral = bagre_ranking(overall, top_n=3)
 
 lider = overall.iloc[0]
 artilheiro = overall.sort_values("GOLS", ascending=False).iloc[0]
@@ -44,23 +48,26 @@ kpi_row([
     ("\U0001F4C5 Rodadas disputadas", str(rodadas_disputadas), "", "#FF3D00"),
 ])
 
+bagre_table(bagres_geral, "Top 3 bagres do geral")
+bagre_note()
+bagre_trophy()
+
+st.divider()
 classification_table(overall, caption="\U0001F3C6 Classificacao geral")
 
 col1, col2 = st.columns(2)
 with col1:
-    mini_ranking_table(overall, "GOLS", "\U000026BD Artilharia geral", top_n=10)
+    mini_ranking_table(overall, "GOLS", "\U000026BD Artilharia geral")
 with col2:
-    mini_ranking_table(overall, "ASSISTENCIA", "\U0001F3AF Assistencias geral", top_n=10)
-
-tiebreak_note()
+    mini_ranking_table(overall, "ASSISTENCIA", "\U0001F3AF Assistencias geral")
 
 st.divider()
 st.subheader("\U0001F4CA Analises visuais")
 
-fig_gols_rank = bar_ranking(overall, "GOLS", "Artilharia - Top 8", player_colors)
-fig_assist_rank = bar_ranking(overall, "ASSISTENCIA", "Assistencias - Top 8", player_colors)
-fig_gols_pie = pie_share(overall, "GOLS", "Fatia de gols por jogador", player_colors)
-fig_ved = ved_bar(overall, "Vitorias, empates e derrotas - Top 8 (por pontos)")
+fig_gols_rank = bar_ranking(overall, "GOLS", "Artilharia - Top 20", player_colors)
+fig_assist_rank = bar_ranking(overall, "ASSISTENCIA", "Assistencias - Top 20", player_colors)
+fig_gols_pie = pie_share(overall, "GOLS", "Fatia de gols por jogador")
+fig_ved = ved_bar(overall, "Vitorias, empates e derrotas - Top 20 (por pontos)")
 
 row1_col1, row1_col2 = st.columns(2)
 row1_col1.pyplot(fig_gols_rank, use_container_width=True)
@@ -82,23 +89,15 @@ if st.button("Gerar relatorio PDF"):
         "Rodadas disputadas": str(rodadas_disputadas),
     }
 
-    artilharia_pdf = overall.nlargest(10, "GOLS")[["JOGADOR", "GOLS"]].rename(columns={"GOLS": "VALUE"})
-    assistencias_pdf = overall.nlargest(10, "ASSISTENCIA")[["JOGADOR", "ASSISTENCIA"]].rename(columns={"ASSISTENCIA": "VALUE"})
-
     figures = [
-        ("Artilharia - Top 8", fig_gols_rank),
-        ("Assistencias - Top 8", fig_assist_rank),
-        ("Fatia de gols por jogador", fig_gols_pie),
-        ("Vitorias, empates e derrotas", fig_ved),
+        ("Artilharia - Top 20", fig_gols_rank, "P"),
+        ("Assistencias - Top 20", fig_assist_rank, "P"),
+        ("Fatia de gols por jogador", fig_gols_pie, "L"),
+        ("Vitorias, empates e derrotas", fig_ved, "P"),
     ]
 
     with st.spinner("Gerando PDF..."):
-        pdf_bytes = build_pdf(
-            kpis,
-            overall,
-            [("Artilharia geral", artilharia_pdf), ("Assistencias geral", assistencias_pdf)],
-            figures,
-        )
+        pdf_bytes = build_pdf(kpis, overall, bagres_geral, figures)
 
     st.download_button(
         "Baixar PDF",
@@ -106,3 +105,5 @@ if st.button("Gerar relatorio PDF"):
         file_name=f"relatorio_futebol_quarta_{datetime.now().strftime('%Y%m%d')}.pdf",
         mime="application/pdf",
     )
+
+page_footer()
