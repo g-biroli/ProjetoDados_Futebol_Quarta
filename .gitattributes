@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Sempre LF (evita diffs falsos entre o fetch_data.py rodando no Windows
+# local e na GitHub Action, que roda em Linux).
+data/*.csv text eol=lf
