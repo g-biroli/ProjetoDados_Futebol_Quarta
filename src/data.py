@@ -1,112 +1,125 @@
-"""Carga e tratamento dos dados do futebol de quarta a partir do Google Sheets."""
+"""Carga e tratamento dos dados do futebol de quarta.
+
+Fonte de dados: aba "BASE JOGOS" da planilha do grupo no Google Drive - a
+aba onde o proprio grupo cola os resultados de cada rodada (uma linha por
+jogador, por rodada, ja com PTS/V/E/D/GOLS/ASSIST./G+A calculados). Assim
+que uma rodada nova e adicionada la (com a coluna RODADA identificando o
+numero da rodada), o app busca a planilha de novo (cache de poucos minutos)
+e a Visao da Rodada e a Visao Geral refletem os dados automaticamente - sem
+nenhum passo manual. Veja o README para mais detalhes e o fallback usado
+quando a planilha esta temporariamente inacessivel.
+"""
 
 import io
+from pathlib import Path
 
 import pandas as pd
 import requests
 import streamlit as st
 
-SHEET_ID = "1Dlxe4xHllf27ILFaQsRBle0Ui_-VQrz1l2o_o--_DME"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?usp=sharing"
+SHEET_ID = "1t8gQRAYeODvDrsITIkZJPh3u-kZ6g3k7"
+BASE_JOGOS_GID = "943973938"  # aba "BASE JOGOS"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={BASE_JOGOS_GID}"
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
-NUMERIC_COLS = ["GOLS", "ASSISTENCIA", "VITORIA", "DERROTA", "EMPATE", "PARTIDAS"]
+LOCAL_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "base_jogos.csv"
+
+# A aba "BASE JOGOS" tem 2 linhas de titulo antes do cabecalho real e uma
+# coluna em branco na frente (layout pensado para leitura visual na planilha).
+HEADER_ROW_INDEX = 2
+
+# Ordem de desempate oficial do grupo: pontos, depois gols+assistencias,
+# depois gols, depois assistencias (ver legenda "CRITERIOS DE DESEMPATE").
+TIEBREAK_COLS = ["PTS", "GA", "GOLS", "ASSISTENCIA"]
 
 
-@st.cache_data(ttl=300, show_spinner="Carregando dados da planilha...")
-def load_data() -> pd.DataFrame:
-    """Baixa a planilha publica do Google Sheets e devolve os dados tratados."""
-    response = requests.get(CSV_URL, timeout=15)
-    response.raise_for_status()
+def _clean(raw: pd.DataFrame) -> pd.DataFrame:
+    raw = raw.loc[:, ~raw.columns.str.startswith("Unnamed")]
 
-    df = pd.read_csv(io.StringIO(response.content.decode("utf-8")))
-    df.columns = [c.strip().upper() for c in df.columns]
-
-    required = {"DATA", "JOGADOR", *NUMERIC_COLS}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"Colunas ausentes na planilha: {', '.join(sorted(missing))}")
+    df = raw.rename(
+        columns={
+            "NOME": "JOGADOR",
+            "V": "VITORIA",
+            "E": "EMPATE",
+            "D": "DERROTA",
+            "ASSIST.": "ASSISTENCIA",
+            "G+A": "GA",
+        }
+    )
+    df = df[["JOGADOR", "PTS", "VITORIA", "EMPATE", "DERROTA", "GOLS", "ASSISTENCIA", "GA", "RODADA", "DATA"]]
 
     df["JOGADOR"] = df["JOGADOR"].astype(str).str.strip().str.upper()
     df["DATA"] = pd.to_datetime(df["DATA"], dayfirst=True, errors="coerce")
 
-    for col in NUMERIC_COLS:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+    for col in ["PTS", "VITORIA", "EMPATE", "DERROTA", "GOLS", "ASSISTENCIA", "GA", "RODADA"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    df = df.dropna(subset=["DATA"])
+    df = df.dropna(subset=["DATA", "RODADA", "JOGADOR"])
     df = df[df["JOGADOR"] != ""]
 
-    return df.sort_values("DATA").reset_index(drop=True)
+    for col in ["PTS", "VITORIA", "EMPATE", "DERROTA", "GOLS", "ASSISTENCIA", "GA"]:
+        df[col] = df[col].fillna(0).astype(int)
+    df["RODADA"] = df["RODADA"].astype(int)
+
+    df["PARTIDAS"] = df["VITORIA"] + df["EMPATE"] + df["DERROTA"]
+
+    return df.sort_values(["RODADA", "JOGADOR"]).reset_index(drop=True)
 
 
-def player_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """Consolida as estatisticas de cada jogador no periodo selecionado."""
+def _fetch_live() -> pd.DataFrame:
+    response = requests.get(CSV_URL, timeout=15)
+    response.raise_for_status()
+    raw = pd.read_csv(io.StringIO(response.content.decode("utf-8")), skiprows=HEADER_ROW_INDEX)
+    return _clean(raw)
+
+
+def _read_local() -> pd.DataFrame:
+    raw = pd.read_csv(LOCAL_DATA_PATH, skiprows=HEADER_ROW_INDEX)
+    return _clean(raw)
+
+
+@st.cache_data(ttl=300, show_spinner="Buscando dados atualizados da planilha...")
+def load_data() -> pd.DataFrame:
+    """Busca a planilha ao vivo (cache de 5 min, entao uma rodada nova
+    aparece no app poucos minutos depois de ser colada em "BASE JOGOS").
+    Se a planilha estiver inacessivel (sem internet, permissao alterada
+    etc.), cai para o ultimo snapshot salvo em data/base_jogos.csv - ver
+    scripts/fetch_data.py e o README."""
+    try:
+        return _fetch_live()
+    except Exception:
+        if LOCAL_DATA_PATH.exists():
+            return _read_local()
+        raise
+
+
+def rank(df: pd.DataFrame) -> pd.DataFrame:
+    """Aplica o desempate oficial e numera a posicao (POS)."""
+    ranked = df.sort_values(TIEBREAK_COLS, ascending=False).reset_index(drop=True)
+    ranked.insert(0, "POS", ranked.index + 1)
+    return ranked
+
+
+def round_table(df: pd.DataFrame, rodada: int) -> pd.DataFrame:
+    """Tabela de uma rodada especifica, com POS baseado no desempate oficial."""
+    subset = df[df["RODADA"] == rodada].copy()
+    return rank(subset)
+
+
+def overall_table(df: pd.DataFrame) -> pd.DataFrame:
+    """Classificacao geral: soma de todas as rodadas, por jogador."""
     summary = (
         df.groupby("JOGADOR")
         .agg(
-            DIAS_JOGADOS=("DATA", "nunique"),
-            PARTIDAS=("PARTIDAS", "sum"),
+            PTS=("PTS", "sum"),
+            VITORIA=("VITORIA", "sum"),
+            EMPATE=("EMPATE", "sum"),
+            DERROTA=("DERROTA", "sum"),
             GOLS=("GOLS", "sum"),
-            ASSISTENCIAS=("ASSISTENCIA", "sum"),
-            VITORIAS=("VITORIA", "sum"),
-            DERROTAS=("DERROTA", "sum"),
-            EMPATES=("EMPATE", "sum"),
+            ASSISTENCIA=("ASSISTENCIA", "sum"),
+            GA=("GA", "sum"),
+            RODADAS_JOGADAS=("RODADA", "nunique"),
         )
         .reset_index()
     )
-
-    partidas_seguras = summary["PARTIDAS"].replace(0, pd.NA)
-    dias_seguros = summary["DIAS_JOGADOS"].replace(0, pd.NA)
-
-    summary["APROVEITAMENTO_%"] = (
-        (summary["VITORIAS"] / partidas_seguras * 100).round(1).fillna(0)
-    )
-    summary["MEDIA_GOLS_DIA"] = (summary["GOLS"] / dias_seguros).round(2).fillna(0)
-    summary["MEDIA_ASSIST_DIA"] = (
-        (summary["ASSISTENCIAS"] / dias_seguros).round(2).fillna(0)
-    )
-    summary["PARTICIPACOES_GOL"] = summary["GOLS"] + summary["ASSISTENCIAS"]
-
-    return summary.sort_values("GOLS", ascending=False).reset_index(drop=True)
-
-
-def matches_held(df: pd.DataFrame) -> int:
-    """Total de jogos (mini-partidas) realmente disputados no periodo.
-
-    A coluna PARTIDAS e um valor por dia (repetido em cada linha de jogador
-    daquele dia), entao somar a coluna direto por linha multiplicaria o total
-    pela quantidade de jogadores presentes. O total correto e a soma do maior
-    valor de PARTIDAS observado em cada dia distinto.
-    """
-    if df.empty:
-        return 0
-    return int(df.groupby("DATA")["PARTIDAS"].max().sum())
-
-
-def cumulative_timeseries(df: pd.DataFrame, metric: str) -> pd.DataFrame:
-    """Serie temporal acumulada (por jogador e data) para GOLS ou ASSISTENCIA."""
-    ts = (
-        df.groupby(["JOGADOR", "DATA"])[metric]
-        .sum()
-        .reset_index()
-        .sort_values("DATA")
-    )
-    ts["CUM"] = ts.groupby("JOGADOR")[metric].cumsum()
-    return ts
-
-
-def winrate_timeseries(df: pd.DataFrame) -> pd.DataFrame:
-    """Aproveitamento (%) acumulado por jogador ao longo do tempo."""
-    ts = (
-        df.groupby(["JOGADOR", "DATA"])
-        .agg(VITORIA=("VITORIA", "sum"), PARTIDAS=("PARTIDAS", "sum"))
-        .reset_index()
-        .sort_values("DATA")
-    )
-    ts["VITORIA_CUM"] = ts.groupby("JOGADOR")["VITORIA"].cumsum()
-    ts["PARTIDAS_CUM"] = ts.groupby("JOGADOR")["PARTIDAS"].cumsum()
-    partidas_seguras = ts["PARTIDAS_CUM"].replace(0, pd.NA)
-    ts["APROVEITAMENTO_%"] = (
-        (ts["VITORIA_CUM"] / partidas_seguras * 100).round(1).fillna(0)
-    )
-    return ts
+    return rank(summary)
