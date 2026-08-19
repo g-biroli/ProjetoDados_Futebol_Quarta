@@ -29,8 +29,14 @@ def main() -> None:
         print("Conteudo baixado nao parece ser a tabela esperada (faltam colunas).", file=sys.stderr)
         sys.exit(1)
 
+    # Normaliza para LF e escreve sem traducao de fim-de-linha do SO: sem
+    # isso, rodar esse script no Windows (CRLF) e depois na Action do
+    # GitHub (Linux, LF) faz o arquivo inteiro parecer "mudado" toda vez,
+    # mesmo quando os dados da planilha sao identicos.
+    content = content.replace("\r\n", "\n").replace("\r", "\n")
+
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(content, encoding="utf-8")
+    OUTPUT_PATH.write_text(content, encoding="utf-8", newline="\n")
     print(f"Dados salvos em {OUTPUT_PATH}")
 
 
