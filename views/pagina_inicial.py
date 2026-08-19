@@ -2,13 +2,14 @@
 
 import streamlit as st
 
+from src.charts import GOLD
 from src.theme import LOGO_PATH, apply_theme, callout, github_button
 
 GITHUB_URL = "https://github.com/g-biroli/ProjetoDados_Futebol_Quarta"
 
 apply_theme()
 
-col1, col2, col3 = st.columns([1, 1.3, 1])
+col1, col2, col3 = st.columns([2, 1, 2])
 with col2:
     if LOGO_PATH.exists():
         st.image(str(LOGO_PATH), use_container_width=True)
@@ -30,13 +31,20 @@ st.markdown(
 st.markdown('<div class="wc-stripe"></div>', unsafe_allow_html=True)
 
 st.markdown(
-    """
-<div style="text-align:center; max-width:720px; margin:0 auto; line-height:1.6;">
-Dados e estatisticas dos participantes da resenha do fut. Cada gol,
-assistencia, vitoria e derrota e registrada.<br><br>
-Nosso objetivo e descobrir quem e o Messi, o Neymar e o CR7 do grupo -
-mas tambem apontar os bagres: Rony Rustico, Robinho Jr. e Memphis Depay.<br><br>
-Os dados vem direto de uma planilha compartilhada no Google Drive.
+    f"""
+<div style="text-align:center; max-width:760px; margin:0 auto; line-height:1.7;">
+  <p style="font-size:1.2rem; font-weight:600; color:#ffffff; margin:0 0 16px 0;">
+    Dados e estatísticas dos participantes da resenha do fut.<br>
+    Cada gol, assistência, vitória e derrota é registrada.
+  </p>
+  <p style="font-size:1.05rem; color:#f5f5f5; margin:0 0 16px 0;">
+    <span style="color:{GOLD}; font-weight:700;">Objetivo do projeto:</span>
+    descobrir quem é o Messi, o Neymar e o CR7 do grupo - mas também apontar
+    os bagres de cada rodada: Rony Rústico, Robinho Jr. e Memphis Depay.
+  </p>
+  <p style="font-size:1.2rem; font-weight:600; color:#ffffff; margin:0;">
+    Os dados vêm direto de uma planilha compartilhada no Google Drive.
+  </p>
 </div>
 """,
     unsafe_allow_html=True,

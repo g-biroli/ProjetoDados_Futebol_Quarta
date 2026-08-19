@@ -2,9 +2,10 @@
 
 import streamlit as st
 
-from src.data import load_data, round_table, worst_table
+from src.data import bagre_ranking, load_data, round_table
 from src.theme import (
     apply_theme,
+    bagre_note,
     bagre_table,
     bagre_trophy,
     classification_table,
@@ -35,7 +36,8 @@ data_da_rodada = round_df["DATA"].iloc[0].strftime("%d/%m/%Y")
 
 scoreboard_header("Fut Quarta", f"{rodada}", data_da_rodada)
 
-bagre_table(worst_table(round_df, top_n=3), "Top 3 bagres da rodada")
+bagre_table(bagre_ranking(round_df, top_n=3), "Top 3 bagres da rodada")
+bagre_note()
 bagre_trophy()
 
 st.divider()

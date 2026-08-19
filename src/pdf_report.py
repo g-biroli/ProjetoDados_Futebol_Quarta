@@ -18,7 +18,16 @@ from fpdf import FPDF
 from fpdf.fonts import FontFace
 from PIL import Image
 
-from src.theme import BAGRE_TROPHY_PATH, LOGO_PATH
+from src.theme import BAGRE_ICON_PATH, BAGRE_TROPHY_PATH, LOGO_PATH
+
+BAGRE_NOTE = (
+    "Como funciona o ranking de bagre: leva em conta as piores posicoes de "
+    "cada rodada e do geral, pela quantidade de vitorias, derrotas e "
+    "empates. Em caso de empate, o criterio de desempate usa gols e "
+    "assistencias."
+)
+
+BAGRE_ROW_H = 8
 
 BLACK = (0, 0, 0)
 DARK_SURFACE = (20, 20, 20)
@@ -93,7 +102,7 @@ def _row_style(pos_index: int) -> FontFace:
     return DEFAULT_ROW
 
 
-def _render_table(pdf: FPDF, columns: list[tuple[str, str, int]], rows: pd.DataFrame, medals: bool) -> None:
+def _render_table(pdf: FPDF, columns: list[tuple[str, str, int]], rows: pd.DataFrame) -> None:
     col_widths = [w for _, _, w in columns]
     headers = [label for _, label, _ in columns]
     field_names = [name for name, _, _ in columns]
@@ -103,12 +112,65 @@ def _render_table(pdf: FPDF, columns: list[tuple[str, str, int]], rows: pd.DataF
         for h in headers:
             header_row.cell(h)
         for i, (_, record) in enumerate(rows.iterrows()):
-            style = GOLD_ROW if not medals else _row_style(i)
+            style = _row_style(i)
             row = table.row()
             for field in field_names:
                 value = record[field]
                 text = str(value) if isinstance(value, str) else f"{value:g}"
                 row.cell(text, style=style)
+
+
+def _render_bagre_table(pdf: FPDF, rows: pd.DataFrame) -> None:
+    """Tabela dos bagres desenhada celula a celula (em vez de pdf.table()),
+    pra poder colocar o icone do bagre ao lado do nome e colorir so a
+    coluna POS (ouro/prata/bronze) - igual a tabela da pagina web."""
+    badge_fill = {1: GOLD, 2: SILVER, 3: BRONZE}
+    icon_ok = BAGRE_ICON_PATH.exists()
+    icon_h = BAGRE_ROW_H - 3
+    x0 = pdf.l_margin
+    y = pdf.get_y()
+
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_fill_color(*BLACK)
+    pdf.set_text_color(*WHITE)
+    x = x0
+    for _field, label, w in BAGRE_COLUMNS:
+        pdf.set_xy(x, y)
+        pdf.cell(w, BAGRE_ROW_H, label, border=1, align="C", fill=True)
+        x += w
+    y += BAGRE_ROW_H
+
+    pdf.set_font("Helvetica", "", 8)
+    for i, (_, record) in enumerate(rows.iterrows()):
+        pos = i + 1
+        x = x0
+        for field, _label, w in BAGRE_COLUMNS:
+            pdf.set_xy(x, y)
+            value = record[field]
+            text = str(value) if isinstance(value, str) else f"{value:g}"
+
+            if field == "POS":
+                pdf.set_fill_color(*badge_fill.get(pos, DARK_SURFACE))
+                pdf.set_text_color(*BLACK)
+                pdf.cell(w, BAGRE_ROW_H, text, border=1, align="C", fill=True)
+            elif field == "JOGADOR":
+                pdf.set_fill_color(*DARK_SURFACE)
+                pdf.set_text_color(*WHITE)
+                pdf.cell(w, BAGRE_ROW_H, "", border=1, fill=True)
+                text_x = x + 2
+                if icon_ok:
+                    pdf.image(str(BAGRE_ICON_PATH), x=x + 2, y=y + 1.5, h=icon_h)
+                    text_x = x + 2 + icon_h + 2
+                pdf.set_xy(text_x, y)
+                pdf.cell(w - (text_x - x) - 1, BAGRE_ROW_H, text, align="L")
+            else:
+                pdf.set_fill_color(*DARK_SURFACE)
+                pdf.set_text_color(*WHITE)
+                pdf.cell(w, BAGRE_ROW_H, text, border=1, align="C", fill=True)
+            x += w
+        y += BAGRE_ROW_H
+
+    pdf.set_xy(x0, y)
 
 
 def _fit_image(pdf: FPDF, image_path: str) -> None:
@@ -172,7 +234,7 @@ def build_pdf(
     pdf.set_font("Helvetica", "B", 13)
     pdf.cell(0, 8, "Classificacao geral", ln=True)
     pdf.set_font("Helvetica", "", 8)
-    _render_table(pdf, TABLE_COLUMNS, overall_df, medals=True)
+    _render_table(pdf, TABLE_COLUMNS, overall_df)
 
     tmp_files: list[str] = []
     try:
@@ -180,9 +242,14 @@ def build_pdf(
         pdf.set_font("Helvetica", "B", 14)
         pdf.set_text_color(*GOLD)
         pdf.cell(0, 10, "Top 3 bagres", ln=True)
-        pdf.set_font("Helvetica", "", 8)
-        _render_table(pdf, BAGRE_COLUMNS, bagre_df, medals=False)
-        pdf.ln(6)
+        _render_bagre_table(pdf, bagre_df)
+        pdf.ln(4)
+
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_text_color(*INK_MUTED)
+        pdf.multi_cell(0, 5, BAGRE_NOTE)
+        pdf.ln(2)
+
         if BAGRE_TROPHY_PATH.exists():
             _fit_image(pdf, str(BAGRE_TROPHY_PATH))
 

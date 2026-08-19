@@ -3,6 +3,9 @@
 Painel em Streamlit com o placar do futebol semanal do grupo: classificacao
 geral, artilharia, assistencias e analises visuais.
 
+> Vai preencher a planilha depois do jogo? Le o
+> [GUIA_DA_PLANILHA.md](GUIA_DA_PLANILHA.md) - e rapido e evita erro nos dados.
+
 ## Paginas
 
 - **Pagina Inicial** - apresentacao do projeto (sem dados), logo do grupo e

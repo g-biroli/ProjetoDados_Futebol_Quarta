@@ -113,19 +113,24 @@ def pie_share(
     summary_df: pd.DataFrame,
     metric: str,
     title: str,
-    player_colors: dict[str, str],
     top_n: int = 6,
 ) -> plt.Figure:
     """Rosca (donut) com a fatia de cada jogador no total da metrica (ex.: gols).
-    Jogadores fora do top N entram agrupados em "Outros"."""
+    Jogadores fora do top N entram agrupados em "Outros".
+
+    As cores aqui sao atribuidas localmente (1a fatia = 1a cor da paleta, e
+    assim por diante) em vez de usar a cor fixa de cada jogador - com poucas
+    fatias visiveis de cada vez, isso garante que nenhuma cor se repita e a
+    leitura fique clara (ao contrario da cor fixa por jogador, que e ordenada
+    alfabeticamente e pode coincidir para dois jogadores do top N)."""
     top = summary_df.nlargest(top_n, metric)[["JOGADOR", metric]].copy()
     total = summary_df[metric].sum()
     outros = total - top[metric].sum()
 
     labels = top["JOGADOR"].tolist()
     values = top[metric].tolist()
-    colors = [player_colors.get(p, PALETTE[0]) for p in labels]
-    text_colors = [PALETTE_TEXT[PALETTE.index(c)] if c in PALETTE else INK_PRIMARY for c in colors]
+    colors = [PALETTE[i % len(PALETTE)] for i in range(len(labels))]
+    text_colors = [PALETTE_TEXT[i % len(PALETTE_TEXT)] for i in range(len(labels))]
 
     if outros > 0:
         labels.append("Outros")

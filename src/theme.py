@@ -27,6 +27,7 @@ BORDER = "rgba(255,255,255,0.12)"
 
 MEDALS = {1: "\U0001F947", 2: "\U0001F948", 3: "\U0001F949"}  # 🥇 🥈 🥉
 MEDAL_ROW_CLASS = {1: "sb-row-gold", 2: "sb-row-silver", 3: "sb-row-bronze"}
+MEDAL_BADGE_CLASS = {1: "sb-badge-gold", 2: "sb-badge-silver", 3: "sb-badge-bronze"}
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 LOGO_PATH = ASSETS_DIR / "logo.png"
@@ -185,10 +186,22 @@ table.sb-table tr.sb-row-bronze td {{
     font-weight: 700;
 }}
 
-table.sb-table tr.sb-row-bagre td {{
+table.sb-table td.sb-badge-gold {{
     background: {GOLD};
     color: #000000;
-    font-weight: 600;
+    font-weight: 700;
+}}
+
+table.sb-table td.sb-badge-silver {{
+    background: {SILVER};
+    color: #000000;
+    font-weight: 700;
+}}
+
+table.sb-table td.sb-badge-bronze {{
+    background: {BRONZE};
+    color: #000000;
+    font-weight: 700;
 }}
 
 .bagre-icon {{
@@ -296,6 +309,21 @@ table.sb-table tr.sb-row-bagre td {{
     color: {INK_MUTED};
     font-size: 0.85rem;
     margin-top: 4px;
+}}
+
+.bagre-note {{
+    background: {SURFACE};
+    border: 1px solid {BORDER};
+    border-left: 3px solid {GOLD};
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: {INK_MUTED};
+    margin: 6px 0 18px 0;
+}}
+
+.bagre-note b {{
+    color: {INK};
 }}
 
 .stTabs [data-baseweb="tab"] {{
@@ -448,9 +476,9 @@ def mini_ranking_table(df: pd.DataFrame, value_col: str, caption: str, top_n: in
 
 
 def bagre_table(df: pd.DataFrame, caption: str) -> None:
-    """Top 3 'bagres' (piores colocados: mais derrota, menos gol, menos
-    assistencia) - todas as linhas em ouro, com o icone do bagre ao lado do
-    nome de cada jogador."""
+    """Top 3 'bagres' (os ultimos colocados da propria classificacao) - so a
+    coluna POS fica colorida (ouro/prata/bronze, igual ao podio), pra manter
+    o resto da linha limpo e dar destaque ao icone ao lado do nome."""
     icon_uri = _img_data_uri(BAGRE_ICON_PATH)
     columns = [
         ("POS", "POS"),
@@ -463,15 +491,18 @@ def bagre_table(df: pd.DataFrame, caption: str) -> None:
     ]
 
     rows_html = []
-    for _, row in df.iterrows():
+    for i, (_, row) in enumerate(df.iterrows()):
+        pos = i + 1
         cells = []
         for col, _ in columns:
             css_class = "sb-col-jogador" if col == "JOGADOR" else ""
+            if col == "POS" and pos in MEDAL_BADGE_CLASS:
+                css_class = (css_class + " " + MEDAL_BADGE_CLASS[pos]).strip()
             value = html.escape(str(row[col]))
             if col == "JOGADOR" and icon_uri:
                 value = f'<img src="{icon_uri}" class="bagre-icon" alt="">{value}'
             cells.append(f'<td class="{css_class}">{value}</td>')
-        rows_html.append(f'<tr class="sb-row-bagre">{"".join(cells)}</tr>')
+        rows_html.append(f"<tr>{''.join(cells)}</tr>")
 
     header_html = "".join(
         f'<th class="{"sb-col-jogador" if col == "JOGADOR" else ""}">{html.escape(label)}</th>'
@@ -489,12 +520,26 @@ def bagre_table(df: pd.DataFrame, caption: str) -> None:
 
 
 def bagre_trophy() -> None:
-    """Exibe o trofeu 'Bagre D'Or' (assets/bagre_score.jpg), centralizado."""
+    """Exibe o trofeu 'Bagre D'Or' (assets/bagre_score.jpg), centralizado e
+    pequeno - no mesmo tamanho proporcional da logo do grupo (page_footer)."""
     if not BAGRE_TROPHY_PATH.exists():
         return
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3 = st.columns([2, 1, 2])
     with col2:
         st.image(str(BAGRE_TROPHY_PATH), use_container_width=True)
+
+
+def bagre_note() -> None:
+    """Explicacao curta e direta do criterio do ranking de bagre."""
+    st.markdown(
+        '<div class="bagre-note">'
+        "<b>Como funciona o ranking de bagre:</b> leva em conta as piores "
+        "posicoes de cada rodada e do geral, pela quantidade de vitorias, "
+        "derrotas e empates. Em caso de empate, o criterio de desempate usa "
+        "gols e assistencias."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def github_button(url: str, label: str = "Ver codigo no GitHub") -> None:

@@ -5,10 +5,11 @@ from datetime import datetime
 import streamlit as st
 
 from src.charts import assign_player_colors, bar_ranking, pie_share, ved_bar
-from src.data import load_data, overall_table, worst_table
+from src.data import bagre_ranking, load_data, overall_table
 from src.pdf_report import build_pdf
 from src.theme import (
     apply_theme,
+    bagre_note,
     bagre_table,
     bagre_trophy,
     classification_table,
@@ -33,7 +34,7 @@ if df.empty:
 
 overall = overall_table(df)
 player_colors = assign_player_colors(overall["JOGADOR"].tolist())
-bagres_geral = worst_table(overall, top_n=3)
+bagres_geral = bagre_ranking(overall, top_n=3)
 
 lider = overall.iloc[0]
 artilheiro = overall.sort_values("GOLS", ascending=False).iloc[0]
@@ -48,6 +49,7 @@ kpi_row([
 ])
 
 bagre_table(bagres_geral, "Top 3 bagres do geral")
+bagre_note()
 bagre_trophy()
 
 st.divider()
@@ -64,7 +66,7 @@ st.subheader("\U0001F4CA Analises visuais")
 
 fig_gols_rank = bar_ranking(overall, "GOLS", "Artilharia - Top 20", player_colors)
 fig_assist_rank = bar_ranking(overall, "ASSISTENCIA", "Assistencias - Top 20", player_colors)
-fig_gols_pie = pie_share(overall, "GOLS", "Fatia de gols por jogador", player_colors)
+fig_gols_pie = pie_share(overall, "GOLS", "Fatia de gols por jogador")
 fig_ved = ved_bar(overall, "Vitorias, empates e derrotas - Top 20 (por pontos)")
 
 row1_col1, row1_col2 = st.columns(2)
