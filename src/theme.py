@@ -1,13 +1,16 @@
-"""Identidade visual do app: base preto/branco (Copa do Mundo 26), com as
-cores vibrantes da paleta oficial usadas como destaque (KPIs, graficos,
-medalhas) e nao como fundo de tabela inteira - mantendo as tabelas de
-classificacao limpas e faceis de ler.
+"""Identidade visual do app: modo escuro (preto), no espirito da logo do
+grupo e da Copa do Mundo 26, com as cores vibrantes da paleta oficial usadas
+como destaque (KPIs, graficos, medalhas).
 
 Nao reproduz a logo da FIFA/Copa do Mundo nem qualquer marca de terceiros -
-apenas a paleta de cores e o espirito "preto e branco com destaque dourado".
+apenas a paleta de cores e o espirito "preto com destaque dourado". As
+imagens em assets/ (logo do grupo e trofeu "Bagre D'Or") sao do proprio
+grupo.
 """
 
+import base64
 import html
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -16,13 +19,29 @@ from src.charts import BRONZE, GOLD, PALETTE, SILVER
 
 BLACK = "#000000"
 WHITE = "#ffffff"
-INK = "#111111"
-INK_MUTED = "#5c5c5c"
-ROW_ALT = "#f7f7f7"
-BORDER = "rgba(0,0,0,0.08)"
+SURFACE = "#141414"
+SURFACE_ALT = "#1c1c1c"
+INK = "#f5f5f5"
+INK_MUTED = "#a8a8a8"
+BORDER = "rgba(255,255,255,0.12)"
 
 MEDALS = {1: "\U0001F947", 2: "\U0001F948", 3: "\U0001F949"}  # 🥇 🥈 🥉
-MEDAL_BORDER = {1: GOLD, 2: SILVER, 3: BRONZE}
+MEDAL_ROW_CLASS = {1: "sb-row-gold", 2: "sb-row-silver", 3: "sb-row-bronze"}
+
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+LOGO_PATH = ASSETS_DIR / "logo.png"
+BAGRE_ICON_PATH = ASSETS_DIR / "icone_bagre.png"
+BAGRE_TROPHY_PATH = ASSETS_DIR / "bagre_score.jpg"
+
+
+@st.cache_data(show_spinner=False)
+def _img_data_uri(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    ext = path.suffix.lstrip(".").lower()
+    mime = "jpeg" if ext in ("jpg", "jpeg") else ext
+    return f"data:image/{mime};base64," + base64.b64encode(path.read_bytes()).decode()
+
 
 _CSS = f"""
 <style>
@@ -38,7 +57,8 @@ html, body, [class*="css"] {{
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    background: {BLACK};
+    background: {SURFACE};
+    border: 1px solid rgba(212,175,55,0.35);
     border-radius: 12px;
     padding: 18px 22px;
     margin-bottom: 18px;
@@ -66,8 +86,8 @@ html, body, [class*="css"] {{
 }}
 
 .sb-badge {{
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.2);
     border-radius: 8px;
     padding: 6px 14px;
     text-align: center;
@@ -99,7 +119,7 @@ table.sb-table {{
     width: 100%;
     border-collapse: collapse;
     font-size: 0.88rem;
-    background: {WHITE};
+    background: {SURFACE};
 }}
 
 table.sb-table caption {{
@@ -144,11 +164,38 @@ table.sb-table td.sb-col-jogador {{
 }}
 
 table.sb-table tr.sb-row-alt td {{
-    background: {ROW_ALT};
+    background: {SURFACE_ALT};
 }}
 
-table.sb-table tr.sb-row-medal td:first-child {{
-    box-shadow: inset 4px 0 0 0 var(--medal-color);
+table.sb-table tr.sb-row-gold td {{
+    background: {GOLD};
+    color: #000000;
+    font-weight: 700;
+}}
+
+table.sb-table tr.sb-row-silver td {{
+    background: {SILVER};
+    color: #000000;
+    font-weight: 700;
+}}
+
+table.sb-table tr.sb-row-bronze td {{
+    background: {BRONZE};
+    color: #000000;
+    font-weight: 700;
+}}
+
+table.sb-table tr.sb-row-bagre td {{
+    background: {GOLD};
+    color: #000000;
+    font-weight: 600;
+}}
+
+.bagre-icon {{
+    height: 22px;
+    width: auto;
+    vertical-align: middle;
+    margin-right: 6px;
 }}
 
 .wc-stripe {{
@@ -162,7 +209,7 @@ table.sb-table tr.sb-row-medal td:first-child {{
     font-family: 'Archivo Black', 'Inter', sans-serif;
     font-size: 2.3rem;
     line-height: 1.15;
-    color: {INK};
+    color: {WHITE};
     margin-bottom: 0.1rem;
 }}
 
@@ -180,9 +227,9 @@ table.sb-table tr.sb-row-medal td:first-child {{
 }}
 
 .wc-kpi {{
-    background: {WHITE};
+    background: {SURFACE};
     border: 1px solid {BORDER};
-    border-top: 4px solid var(--wc-accent, {BLACK});
+    border-top: 4px solid var(--wc-accent, {GOLD});
     border-radius: 10px;
     padding: 14px 16px;
 }}
@@ -198,7 +245,7 @@ table.sb-table tr.sb-row-medal td:first-child {{
 .wc-kpi .wc-kpi-value {{
     font-family: 'Archivo Black', 'Inter', sans-serif;
     font-size: 1.7rem;
-    color: {INK};
+    color: {WHITE};
     margin: 4px 0 2px 0;
     line-height: 1.1;
 }}
@@ -208,34 +255,41 @@ table.sb-table tr.sb-row-medal td:first-child {{
     color: {INK_MUTED};
 }}
 
-.sb-tiebreak {{
-    background: {WHITE};
-    border: 1px solid {BORDER};
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 0.8rem;
-    color: {INK_MUTED};
+.callout-phrase {{
+    font-family: 'Archivo Black', 'Inter', sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    color: {GOLD};
+    text-align: center;
+    line-height: 1.25;
+    margin: 26px 0 10px 0;
 }}
 
-.sb-tiebreak b {{
-    color: {INK};
+.callout-sub {{
+    font-family: 'Archivo Black', 'Inter', sans-serif;
+    font-size: clamp(1.2rem, 2.6vw, 1.8rem);
+    color: {WHITE};
+    text-align: center;
+    line-height: 1.25;
+    margin: 0 0 26px 0;
 }}
 
 .gh-button {{
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: {BLACK};
-    color: {WHITE} !important;
+    background: transparent;
+    color: {GOLD} !important;
     text-decoration: none !important;
     padding: 10px 18px;
+    border: 1.5px solid {GOLD};
     border-radius: 8px;
     font-weight: 600;
     font-size: 0.9rem;
 }}
 
 .gh-button:hover {{
-    background: #222;
+    background: {GOLD};
+    color: #000000 !important;
 }}
 
 .credit-line {{
@@ -260,6 +314,11 @@ def page_header(title: str, subtitle: str | None = None) -> None:
     if subtitle:
         st.markdown(f'<div class="wc-subtitle">{html.escape(subtitle)}</div>', unsafe_allow_html=True)
     st.markdown('<div class="wc-stripe"></div>', unsafe_allow_html=True)
+
+
+def callout(text: str, variant: str = "primary") -> None:
+    css_class = "callout-phrase" if variant == "primary" else "callout-sub"
+    st.markdown(f'<div class="{css_class}">{html.escape(text)}</div>', unsafe_allow_html=True)
 
 
 def kpi_row(cards: list[tuple[str, str, str, str]]) -> None:
@@ -301,15 +360,10 @@ def scoreboard_header(title: str, rodada_label: str, data_label: str) -> None:
     )
 
 
-def _medal_row_attrs(pos: int) -> str:
-    if pos in MEDAL_BORDER:
-        return f' class="sb-row-medal" style="--medal-color:{MEDAL_BORDER[pos]}"'
-    return ""
-
-
 def classification_table(df: pd.DataFrame, caption: str = "Classificacao geral") -> None:
-    """Tabela POS/JOGADOR/PTS/V/E/D/GOLS/ASSISTENCIA/G+A limpa (fundo branco,
-    zebra sutil), com medalha de ouro/prata/bronze nos 3 primeiros colocados."""
+    """Tabela POS/JOGADOR/PTS/V/E/D/GOLS/ASSISTENCIA/G+A, com a 1a linha em
+    ouro, a 2a em prata e a 3a em bronze - as cores da Copa representando o
+    podio - e medalha ao lado da posicao."""
     columns = [
         ("POS", "POS"),
         ("JOGADOR", "Jogador"),
@@ -325,7 +379,6 @@ def classification_table(df: pd.DataFrame, caption: str = "Classificacao geral")
     rows_html = []
     for i, (_, row) in enumerate(df.iterrows()):
         pos = int(row["POS"])
-        row_class = "sb-row-alt" if i % 2 == 1 else ""
         cells = []
         for col, _ in columns:
             css_class = "sb-col-jogador" if col == "JOGADOR" else ""
@@ -333,10 +386,14 @@ def classification_table(df: pd.DataFrame, caption: str = "Classificacao geral")
             if col == "POS" and pos in MEDALS:
                 value = f"{value} {MEDALS[pos]}"
             cells.append(f'<td class="{css_class}">{value}</td>')
+
+        if pos in MEDAL_ROW_CLASS:
+            row_class = MEDAL_ROW_CLASS[pos]
+        elif i % 2 == 1:
+            row_class = "sb-row-alt"
+        else:
+            row_class = ""
         attrs = f' class="{row_class}"' if row_class else ""
-        medal_attrs = _medal_row_attrs(pos)
-        if medal_attrs:
-            attrs = medal_attrs
         rows_html.append(f"<tr{attrs}>{''.join(cells)}</tr>")
 
     header_html = "".join(
@@ -354,17 +411,24 @@ def classification_table(df: pd.DataFrame, caption: str = "Classificacao geral")
     st.markdown(table_html, unsafe_allow_html=True)
 
 
-def mini_ranking_table(df: pd.DataFrame, value_col: str, caption: str, top_n: int = 10) -> None:
-    """Painel lateral simples (Nº, Jogador, valor) tipo 'Artilharia'/'Assistencias',
-    tambem com medalha nos 3 primeiros."""
+def mini_ranking_table(df: pd.DataFrame, value_col: str, caption: str, top_n: int = 20) -> None:
+    """Painel tipo 'Artilharia'/'Assistencias' (Nº, Jogador, valor), com
+    ouro/prata/bronze nos 3 primeiros."""
     top = df.nlargest(top_n, value_col)[["JOGADOR", value_col]].reset_index(drop=True)
 
     rows_html = []
     for i, row in top.iterrows():
         pos = i + 1
-        row_class = "sb-row-alt" if i % 2 == 1 else ""
         pos_label = f"{pos} {MEDALS[pos]}" if pos in MEDALS else str(pos)
-        attrs = _medal_row_attrs(pos) or (f' class="{row_class}"' if row_class else "")
+
+        if pos in MEDAL_ROW_CLASS:
+            row_class = MEDAL_ROW_CLASS[pos]
+        elif i % 2 == 1:
+            row_class = "sb-row-alt"
+        else:
+            row_class = ""
+        attrs = f' class="{row_class}"' if row_class else ""
+
         rows_html.append(
             f"<tr{attrs}>"
             f"<td>{pos_label}</td>"
@@ -383,13 +447,54 @@ def mini_ranking_table(df: pd.DataFrame, value_col: str, caption: str, top_n: in
     st.markdown(table_html, unsafe_allow_html=True)
 
 
-def tiebreak_note() -> None:
-    st.markdown(
-        '<div class="sb-tiebreak"><b>Criterios de desempate:</b> '
-        "1&ordm; pontos &middot; 2&ordm; gols + assistencias &middot; "
-        "3&ordm; gols &middot; 4&ordm; assistencias</div>",
-        unsafe_allow_html=True,
+def bagre_table(df: pd.DataFrame, caption: str) -> None:
+    """Top 3 'bagres' (piores colocados: mais derrota, menos gol, menos
+    assistencia) - todas as linhas em ouro, com o icone do bagre ao lado do
+    nome de cada jogador."""
+    icon_uri = _img_data_uri(BAGRE_ICON_PATH)
+    columns = [
+        ("POS", "POS"),
+        ("JOGADOR", "Jogador"),
+        ("VITORIA", "V"),
+        ("EMPATE", "E"),
+        ("DERROTA", "D"),
+        ("GOLS", "G"),
+        ("ASSISTENCIA", "A"),
+    ]
+
+    rows_html = []
+    for _, row in df.iterrows():
+        cells = []
+        for col, _ in columns:
+            css_class = "sb-col-jogador" if col == "JOGADOR" else ""
+            value = html.escape(str(row[col]))
+            if col == "JOGADOR" and icon_uri:
+                value = f'<img src="{icon_uri}" class="bagre-icon" alt="">{value}'
+            cells.append(f'<td class="{css_class}">{value}</td>')
+        rows_html.append(f'<tr class="sb-row-bagre">{"".join(cells)}</tr>')
+
+    header_html = "".join(
+        f'<th class="{"sb-col-jogador" if col == "JOGADOR" else ""}">{html.escape(label)}</th>'
+        for col, label in columns
     )
+
+    table_html = (
+        '<div class="sb-table-wrap"><table class="sb-table">'
+        f"<caption>\U0001F41F {html.escape(caption)}</caption>"
+        f"<thead><tr>{header_html}</tr></thead>"
+        f"<tbody>{''.join(rows_html)}</tbody>"
+        "</table></div>"
+    )
+    st.markdown(table_html, unsafe_allow_html=True)
+
+
+def bagre_trophy() -> None:
+    """Exibe o trofeu 'Bagre D'Or' (assets/bagre_score.jpg), centralizado."""
+    if not BAGRE_TROPHY_PATH.exists():
+        return
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        st.image(str(BAGRE_TROPHY_PATH), use_container_width=True)
 
 
 def github_button(url: str, label: str = "Ver codigo no GitHub") -> None:
@@ -397,3 +502,14 @@ def github_button(url: str, label: str = "Ver codigo no GitHub") -> None:
         f'<a class="gh-button" href="{html.escape(url)}" target="_blank">{html.escape(label)}</a>',
         unsafe_allow_html=True,
     )
+
+
+def page_footer() -> None:
+    """Logo do grupo, centralizada, no rodape da pagina."""
+    if not LOGO_PATH.exists():
+        return
+    st.write("")
+    st.divider()
+    col1, col2, col3 = st.columns([2, 1, 2])
+    with col2:
+        st.image(str(LOGO_PATH), use_container_width=True)

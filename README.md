@@ -12,9 +12,16 @@ geral, artilharia, assistencias e analises visuais.
   assistencias daquela rodada).
 - **Visao Geral** - classificacao acumulada de todas as rodadas: lider,
   artilheiro geral, garcom de assistencias geral, tabela completa (com
-  medalha de ouro/prata/bronze nos 3 primeiros) e graficos (ranking de
-  artilharia/assistencias, fatia de gols por jogador, vitorias/empates/
-  derrotas). Tem tambem um botao para baixar tudo em PDF.
+  medalha de ouro/prata/bronze nos 3 primeiros), Top 3 bagres do geral e
+  graficos (ranking Top 20 de artilharia/assistencias, fatia de gols por
+  jogador, vitorias/empates/derrotas). Tem tambem um botao para baixar tudo
+  em PDF.
+
+Tanto a Visao da Rodada quanto a Visao Geral mostram um **Top 3 bagres**: os
+3 piores colocados pelo criterio "mais derrotas, depois menos gols, depois
+menos assistencias" - com o trofeu "Bagre D'Or" (`assets/bagre_score.jpg`) e
+o icone do bagre (`assets/icone_bagre.png`, fundo removido automaticamente)
+ao lado do nome de cada um.
 
 ## Como os dados fluem (de verdade)
 
@@ -49,12 +56,19 @@ entao vale explicar com detalhe:
 ## Regras da classificacao
 
 - **Pontos**: 3 por vitoria + 1 por empate (padrao futebol).
-- **Desempate**: 1º pontos, 2º gols + assistencias, 3º gols, 4º assistencias.
+- **Desempate** (usado so para ordenar, sem uma legenda visivel na tela):
+  1º pontos, 2º gols + assistencias, 3º gols, 4º assistencias.
+- **Bagre**: 1º mais derrotas, 2º menos gols, 3º menos assistencias (o
+  inverso do criterio acima).
 
-## Logo do grupo
+## Imagens do grupo (assets/)
 
-Salve o arquivo da logo em `assets/logo.png` (ver `assets/README.md`). A
-Pagina Inicial mostra automaticamente assim que o arquivo existir.
+- `assets/logo.png` - logo do grupo, usada na Pagina Inicial (grande, no
+  topo) e no rodape de todas as paginas.
+- `assets/bagre_score.jpg` - trofeu "Bagre D'Or", mostrado abaixo do Top 3
+  bagres.
+- `assets/icone_bagre.png` - icone do bagre ao lado do nome de cada bagre nas
+  tabelas (gerado a partir de `icone_bagre.jpg` com o fundo removido).
 
 ## Rodar localmente
 
@@ -91,10 +105,13 @@ streamlit run home.py
 
 ## Identidade visual
 
-Baseada na paleta oficial da FIFA World Cup 26: preto e branco como base
-(cabecalhos, tabelas, texto), dourado como destaque premium (lider, medalha
-de ouro) e as cores vibrantes da paleta (azul, laranja, verde, roxo, vermelho,
-lima) nos graficos - uma cor fixa por jogador, a mesma em todos os graficos e
-no PDF. As tabelas de classificacao usam fundo branco com zebra sutil (em vez
-de cor solida por linha) para ficarem limpas e faceis de ler, com os 3
-primeiros colocados destacados com medalha de ouro/prata/bronze.
+Modo escuro (fundo preto), no espirito da logo do grupo, com a paleta oficial
+da FIFA World Cup 26 como destaque: dourado para premium (lider, 1º lugar,
+Top 3 bagres), prata e bronze para 2º/3º lugar, e as cores vibrantes da
+paleta (azul, laranja, verde, lima, vermelho, roxo) nos graficos - uma cor
+fixa por jogador, a mesma em todos os graficos e no PDF. Nas tabelas de
+classificacao, a 1a linha fica em ouro, a 2a em prata e a 3a em bronze; as
+demais usam fundo escuro com zebra sutil. O PDF replica exatamente as mesmas
+cores, tabelas e graficos da pagina, com o tamanho de cada imagem calculado
+para nunca cortar (paginas em retrato para os rankings Top 20, que sao mais
+altos, e paisagem para a tabela e o grafico de pizza).
