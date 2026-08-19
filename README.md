@@ -82,16 +82,6 @@ pip install -r requirements.txt
 streamlit run home.py
 ```
 
-## Publicar no Streamlit Community Cloud
-
-1. Suba este repositorio no GitHub (`git push`).
-2. Acesse [share.streamlit.io](https://share.streamlit.io) e conecte sua conta
-   do GitHub.
-3. Clique em "New app", selecione o repositorio, a branch e defina o arquivo
-   principal como `home.py`.
-4. Clique em "Deploy". O Streamlit Cloud instala o `requirements.txt` e gera
-   uma URL publica para compartilhar com o grupo.
-
 ## Estrutura
 
 - `home.py` - ponto de entrada; define a navegacao (`st.navigation`) entre as paginas.
@@ -118,3 +108,7 @@ demais usam fundo escuro com zebra sutil. O PDF replica exatamente as mesmas
 cores, tabelas e graficos da pagina, com o tamanho de cada imagem calculado
 para nunca cortar (paginas em retrato para os rankings Top 20, que sao mais
 altos, e paisagem para a tabela e o grafico de pizza).
+
+
+## Link do projeto:
+https://futebol-quarta.streamlit.app/
